@@ -41,6 +41,9 @@
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.1"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["unrs-resolver"]
+  },
   "devDependencies": {
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",

@@ -1,0 +1,31 @@
+services:
+  dashboard:
+    build: .
+    image: dashboard-n8n:latest
+    container_name: dashboard-n8n
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://localhost:3000/api/n8n/health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    # If your n8n is in the same docker network, uncomment and adjust:
+    # networks:
+    #   - n8n-net
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"  # if n8n is on the host
+
+# networks:
+#   n8n-net:
+#     external: true

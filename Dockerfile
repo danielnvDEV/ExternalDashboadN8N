@@ -2,8 +2,8 @@
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
-RUN pnpm install --frozen-lockfile --config.ignored-built-dependencies=
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* pnpm.json* ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # ─── builder ───────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder

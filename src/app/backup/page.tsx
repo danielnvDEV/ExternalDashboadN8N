@@ -32,7 +32,10 @@ export default function BackupPage() {
     setPaths(getBackupPaths());
   }, [workflows.dataUpdatedAt]);
 
-  const list = React.useMemo(() => workflows.data?.data ?? [], [workflows.data]);
+  const allWorkflows = React.useMemo(() => workflows.data?.data ?? [], [workflows.data]);
+  // Los workflows archivados no se respaldan.
+  const list = React.useMemo(() => allWorkflows.filter((w) => !w.isArchived), [allWorkflows]);
+  const archivedCount = allWorkflows.length - list.length;
 
   const { entries, duplicates } = React.useMemo(() => {
     const resolved = resolveFinalPaths(
@@ -70,6 +73,15 @@ export default function BackupPage() {
           Respalda todos tus workflows como archivos JSON. Elige una carpeta de destino y personaliza las rutas por workflow.
         </p>
       </div>
+
+      {archivedCount > 0 && (
+        <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-sm">
+          <Info className="h-4 w-4 mt-0.5 text-muted-foreground" />
+          <p className="text-muted-foreground">
+            {archivedCount} workflow{archivedCount === 1 ? '' : 's'} archivado{archivedCount === 1 ? '' : 's'} {archivedCount === 1 ? 'se ha excluido' : 'se han excluido'} del backup.
+          </p>
+        </div>
+      )}
 
       <SaveFolderPicker onHandleChange={onHandleChange} />
 

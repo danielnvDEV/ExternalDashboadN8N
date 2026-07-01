@@ -47,7 +47,11 @@ export default function DataTableDetailPage() {
   const [search, setSearch] = React.useState('');
   const [sortBy, setSortBy] = React.useState('');
   const [filterText, setFilterText] = React.useState('');
-  const [page, setPage] = React.useState(0);
+  // n8n rows use cursor-based pagination: track the current cursor, the stack of
+  // previous cursors (for "Prev"), and the next cursor returned by the API.
+  const [cursor, setCursor] = React.useState<string | null>(null);
+  const [prevCursors, setPrevCursors] = React.useState<Array<string | null>>([]);
+  const [nextCursor, setNextCursor] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<Array<Record<string, unknown>>>([]);
   const [editingRow, setEditingRow] = React.useState<Record<string, unknown> | null>(null);
   const [insertOpen, setInsertOpen] = React.useState(false);
@@ -59,7 +63,8 @@ export default function DataTableDetailPage() {
 
   const fetchRows = React.useCallback(async () => {
     try {
-      const params: Record<string, string | number> = { limit: 100, skip: page * 100 };
+      const params: Record<string, string | number> = { limit: 100 };
+      if (cursor) params.cursor = cursor;
       if (search) params.search = search;
       if (sortBy) params.sortBy = sortBy;
       if (filterText.trim()) {
@@ -70,19 +75,44 @@ export default function DataTableDetailPage() {
           /* ignore invalid */
         }
       }
-      const r = await apiFetch<{ data: Array<Record<string, unknown>>; count: number }>(
+      const r = await apiFetch<{ data: Array<Record<string, unknown>>; nextCursor?: string | null }>(
         `data-tables/${id}/rows`,
         { query: params },
       );
       setRows(r.data ?? []);
+      setNextCursor(r.nextCursor ?? null);
     } catch {
       setRows([]);
+      setNextCursor(null);
     }
-  }, [id, page, search, sortBy, filterText]);
+  }, [id, cursor, search, sortBy, filterText]);
 
   React.useEffect(() => {
     if (tableQ.data) fetchRows();
   }, [tableQ.data, fetchRows]);
+
+  // Jump back to the first page whenever the query (search/sort/filter) changes.
+  const resetPaging = React.useCallback(() => {
+    setCursor(null);
+    setPrevCursors([]);
+    setNextCursor(null);
+  }, []);
+
+  const goNext = () => {
+    if (!nextCursor) return;
+    setPrevCursors((s) => [...s, cursor]);
+    setCursor(nextCursor);
+  };
+
+  const goPrev = () => {
+    setPrevCursors((s) => {
+      if (s.length === 0) return s;
+      const copy = [...s];
+      const prev = copy.pop();
+      setCursor(prev ?? null);
+      return copy;
+    });
+  };
 
   const onInsert = async (data: Record<string, unknown>) => {
     try {
@@ -201,11 +231,11 @@ export default function DataTableDetailPage() {
               <Input
                 placeholder="Search…"
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                onChange={(e) => { setSearch(e.target.value); resetPaging(); }}
                 className="pl-8"
               />
             </div>
-            <Select value={sortBy || 'none'} onValueChange={(v) => setSortBy(v === 'none' ? '' : v)}>
+            <Select value={sortBy || 'none'} onValueChange={(v) => { setSortBy(v === 'none' ? '' : v); resetPaging(); }}>
               <SelectTrigger>
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -224,11 +254,11 @@ export default function DataTableDetailPage() {
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1.5">
-              <Button onClick={fetchRows} size="sm" variant="outline">
+              <Button onClick={() => { resetPaging(); fetchRows(); }} size="sm" variant="outline">
                 <Filter className="h-3.5 w-3.5 mr-1" /> Apply
               </Button>
               <Button
-                onClick={() => { setSearch(''); setSortBy(''); setPage(0); }}
+                onClick={() => { setSearch(''); setSortBy(''); resetPaging(); }}
                 size="sm"
                 variant="ghost"
               >
@@ -304,11 +334,11 @@ export default function DataTableDetailPage() {
               {rows.length === 0 ? 'No rows' : `Showing ${rows.length} row${rows.length === 1 ? '' : 's'}`}
             </span>
             <div className="flex items-center gap-1">
-              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+              <Button size="sm" variant="outline" onClick={goPrev} disabled={prevCursors.length === 0}>
                 Prev
               </Button>
-              <span className="px-2 text-muted-foreground">Page {page + 1}</span>
-              <Button size="sm" variant="outline" onClick={() => setPage((p) => p + 1)} disabled={rows.length < 100}>
+              <span className="px-2 text-muted-foreground">Page {prevCursors.length + 1}</span>
+              <Button size="sm" variant="outline" onClick={goNext} disabled={!nextCursor}>
                 Next
               </Button>
             </div>

@@ -126,6 +126,22 @@ export async function writeJsonToBase(
   await writable.close();
 }
 
+export async function writeTextToBase(
+  base: FileSystemDirectoryHandle,
+  relPath: string,
+  text: string,
+): Promise<void> {
+  const { dirs, file } = splitPath(relPath);
+  let dir: FileSystemDirectoryHandle = base;
+  for (const segment of dirs) {
+    dir = await dir.getDirectoryHandle(segment, { create: true });
+  }
+  const fileHandle = await dir.getFileHandle(file, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(text);
+  await writable.close();
+}
+
 /** Best-effort label for the picked folder. */
 export async function describeBaseDir(base: FileSystemDirectoryHandle): Promise<string> {
   // FileSystemDirectoryHandle has no public `name` in all browsers; iterate as fallback.

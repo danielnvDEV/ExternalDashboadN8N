@@ -8,6 +8,7 @@ import { PageError } from '@/components/capability-gate';
 import { SaveFolderPicker } from '@/components/backup/save-folder-picker';
 import { BackupPathsEditor } from '@/components/backup/backup-paths-editor';
 import { BulkExport, type BulkExportEntry } from '@/components/backup/bulk-export';
+import { DataTablesExport } from '@/components/backup/data-tables-export';
 import { getBackupPaths, resolveFinalPaths } from '@/lib/backup-paths';
 import { useInternalFolderData } from '@/lib/use-internal-folders';
 import type { FileSystemDirectoryHandle } from '@/lib/fs-access';
@@ -116,6 +117,8 @@ export default function BackupPage() {
       )}
 
       <BulkExport entries={entries} folderSignal={folderSignal} />
+
+      <DataTablesExport folderSignal={folderSignal} />
 
       {workflows.data?.nextCursor && (
         <p className="text-xs text-muted-foreground">
